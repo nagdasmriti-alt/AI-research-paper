@@ -1,0 +1,251 @@
+# registry.yaml : data registry for the live version of
+# "What the evidence says about AI, automation and jobs"
+# Base paper: Petrascu & Birlan (2026), Management & Marketing 21:10
+#             https://doi.org/10.1007/s44491-026-00012-x
+#
+# status values:
+#   baseline_frozen : numbers read from the paper; change only when the paper's model is re-run
+#   found           : the source exists (confirmed by search); download path/format NOT yet tested
+#   to_identify     : no source chosen yet
+#   blocked         : cannot proceed until a named dependency is resolved
+# role values:
+#   evidence : feeds the pooled meta-analysis result itself
+#   context  : live background indicator shown beside the evidence; does NOT test the paper's effect
+# update_mode: auto | review (script proposes, a person approves) | manual
+# Secrets are written as ${NAME} and read from the environment; never put a key in this file.
+
+meta:
+  project: live-ai-labour-evidence
+  paper_doi: 10.1007/s44491-026-00012-x
+  paper_licence: "CC BY-NC-ND 4.0 (adaptations may not be shared without permission)"
+  registry_version: 1
+  refreshed_by_default: weekly
+
+variables:
+
+  # ---------- A. Paper baseline (frozen until the model can be re-run) ----------
+  - id: pooled_effect_overall
+    label: Pooled effect of AI/automation exposure, all outcomes (PCC)
+    role: evidence
+    unit: partial correlation coefficient (-1 to 1)
+    status: baseline_frozen
+    baseline: {value: 0.0059, se: 0.0168, p: 0.726, df: 17.7, studies: 19, estimates: 321, ref: "Table 2", as_of: "2026-07-30"}
+    source: {org: Petrascu & Birlan 2026, url: "https://doi.org/10.1007/s44491-026-00012-x", format: paper}
+    update_mode: review
+    cadence: on_new_studies
+    stale_after_days: 365
+    licence: CC BY-NC-ND 4.0
+    validation: {min: -1, max: 1}
+    model:
+      method: cumulative_meta_analysis
+      note: "Re-estimate three-level random-effects model (REML, CR2 cluster-robust) as studies are added"
+      predictive_sd_new_study: "sqrt(tau2_between + tau2_within) = sqrt(0.0044 + 0.0059) = 0.1015 (our calculation, not in the paper)"
+    depends_on: [author_dataset]
+    reader_mapping: {question: "Outcome you care about", maps_to: outcome filter}
+
+  - id: pooled_effect_employment
+    label: Pooled effect on employment (PCC)
+    role: evidence
+    unit: PCC
+    status: baseline_frozen
+    baseline: {value: -0.0079, se: 0.0464, p: 0.868, df: 11, studies: 12, estimates: 144, ref: "Table 4", as_of: "2026-07-30"}
+    source: {org: Petrascu & Birlan 2026, url: "https://doi.org/10.1007/s44491-026-00012-x", format: paper}
+    update_mode: review
+    cadence: on_new_studies
+    stale_after_days: 365
+    licence: CC BY-NC-ND 4.0
+    validation: {min: -1, max: 1}
+    model: {method: cumulative_meta_analysis}
+    depends_on: [author_dataset]
+    reader_mapping: {question: "Outcome you care about", maps_to: outcome filter}
+
+  - id: pooled_effect_wages
+    label: Pooled effect on wages (PCC)
+    role: evidence
+    unit: PCC
+    status: baseline_frozen
+    baseline: {value: 0.0437, se: 0.0348, p: 0.256, df: 6, studies: 7, estimates: 88, ref: "Table 4", as_of: "2026-07-30"}
+    source: {org: Petrascu & Birlan 2026, url: "https://doi.org/10.1007/s44491-026-00012-x", format: paper}
+    update_mode: review
+    cadence: on_new_studies
+    stale_after_days: 365
+    licence: CC BY-NC-ND 4.0
+    validation: {min: -1, max: 1}
+    model: {method: cumulative_meta_analysis}
+    depends_on: [author_dataset]
+    reader_mapping: {question: "Outcome you care about", maps_to: outcome filter}
+
+  - id: pooled_effect_skills
+    label: Pooled effect on skill demand (PCC)
+    role: evidence
+    unit: PCC
+    status: baseline_frozen
+    baseline: {value: -0.0234, se: 0.0283, p: 0.437, df: 6.94, studies: 8, estimates: 89, ref: "Table 4", as_of: "2026-07-30"}
+    source: {org: Petrascu & Birlan 2026, url: "https://doi.org/10.1007/s44491-026-00012-x", format: paper}
+    update_mode: review
+    cadence: on_new_studies
+    stale_after_days: 365
+    licence: CC BY-NC-ND 4.0
+    validation: {min: -1, max: 1}
+    model: {method: cumulative_meta_analysis}
+    depends_on: [author_dataset]
+    reader_mapping: {question: "Outcome you care about", maps_to: outcome filter}
+
+  - id: ai_vs_automation_difference
+    label: Difference between AI-specific and broader automation measures (employment / wages / skills)
+    role: evidence
+    unit: PCC difference
+    status: baseline_frozen
+    baseline: {employment: {value: 0.0507, se: 0.0394, p: 0.293}, wages: {value: -0.0210, se: 0.0178, p: 0.426}, skills: {value: 0.0021, se: 0.0056, p: 0.775}, ref: "Table 5", as_of: "2026-07-30"}
+    source: {org: Petrascu & Birlan 2026, url: "https://doi.org/10.1007/s44491-026-00012-x", format: paper}
+    update_mode: review
+    cadence: on_new_studies
+    stale_after_days: 365
+    licence: CC BY-NC-ND 4.0
+    validation: {min: -1, max: 1}
+    model: {method: meta_regression_moderator}
+    depends_on: [author_dataset]
+    reader_mapping: {question: "Technology (AI / automation / either)", maps_to: technology filter}
+
+  - id: heterogeneity_and_bias
+    label: Heterogeneity (tau2) and publication-bias tests
+    role: evidence
+    unit: variance / coefficient
+    status: baseline_frozen
+    baseline: {tau2_between: 0.0044, tau2_within: 0.0059, pet: {value: 0.0154, p: 0.435}, fat: {value: -0.2920, p: 0.682}, ref: "Tables 3 and 7", as_of: "2026-07-30"}
+    source: {org: Petrascu & Birlan 2026, url: "https://doi.org/10.1007/s44491-026-00012-x", format: paper}
+    update_mode: review
+    cadence: on_new_studies
+    stale_after_days: 365
+    licence: CC BY-NC-ND 4.0
+    validation: {min: -5, max: 5}
+    model: {method: cumulative_meta_analysis}
+    depends_on: [author_dataset]
+    reader_mapping: null
+
+  # ---------- B. Evidence pipeline (new studies) ----------
+  - id: author_dataset
+    label: Dataset of 321 extracted estimates (needed to re-run the pooled model)
+    role: evidence
+    unit: regression estimates (coefficient, SE, n, number of variables)
+    status: blocked
+    source: {org: corresponding author (gianina.petrascu@csie.ase.ro), url: null, format: "on request (per the paper's data-availability statement)"}
+    update_mode: manual
+    cadence: once, then per update
+    stale_after_days: null
+    licence: "unknown; written permission needed to publish adapted results"
+    validation: {required_columns: [study_id, outcome, technology_domain, coefficient, se, n_obs, n_vars]}
+    model: null
+    notes: "Without this file, pooled results stay frozen. Ask for the file AND for permission to publish updated estimates."
+    reader_mapping: null
+
+  - id: new_study_feed
+    label: Candidate new studies (screened by a person before inclusion)
+    role: evidence
+    unit: papers
+    status: found
+    source:
+      org: OpenAlex
+      url: "https://api.openalex.org/works?search=${QUERY}&filter=from_publication_date:${SINCE}"
+      docs: "https://developers.openalex.org/"
+      format: json
+      query_text: "artificial intelligence machine learning automation robot labor labour employment wage skill demand (from the paper's Table 1 search strings)"
+    update_mode: review
+    cadence: weekly
+    stale_after_days: 21
+    licence: "OpenAlex data is open; check current terms"
+    validation: {screening_rules: "regression-based, comparable effect sizes, data available, English, article (paper section 3.1)"}
+    model: null
+    notes: "URL pattern not tested from here. A screened paper becomes an estimate only after its coefficient, SE and df are extracted by hand."
+    reader_mapping: null
+
+  # ---------- C. Live context indicators (US; do NOT test the paper's effect) ----------
+  - id: us_employment_population_ratio
+    label: US employment-population ratio
+    role: context
+    unit: "% of civilian population 16+"
+    status: found
+    source:
+      org: "US BLS via FRED (series EMRATIO)"
+      url: "https://fred.stlouisfed.org/data/EMRATIO.txt"
+      alt_url: "https://api.stlouisfed.org/fred/series/observations?series_id=EMRATIO&api_key=${FRED_API_KEY}&file_type=json"
+      format: text
+    update_mode: auto
+    cadence: monthly
+    stale_after_days: 75
+    licence: "check FRED/BLS terms; credit BLS and FRED"
+    validation: {min: 40, max: 80, max_period_change: 2}
+    model: {method: linear_trend_with_band, window_years: null, continuation: null, acceleration: null, reversal: null}
+    notes: "The .txt table path follows the pattern seen for other FRED series (e.g. ECOMSA.txt) but is untested; the API alt needs a free key."
+    reader_mapping: null
+
+  - id: us_unemployment_rate
+    label: US unemployment rate
+    role: context
+    unit: "% of labour force"
+    status: found
+    source:
+      org: "US BLS via FRED (series UNRATE)"
+      url: "https://fred.stlouisfed.org/data/UNRATE.txt"
+      alt_url: "https://api.stlouisfed.org/fred/series/observations?series_id=UNRATE&api_key=${FRED_API_KEY}&file_type=json"
+      format: text
+    update_mode: auto
+    cadence: monthly
+    stale_after_days: 75
+    licence: "check FRED/BLS terms"
+    validation: {min: 0, max: 30, max_period_change: 2}
+    model: {method: linear_trend_with_band, window_years: null, continuation: null, acceleration: null, reversal: null}
+    notes: "Series ID assumed from general knowledge; confirm on the FRED page. Path untested."
+    reader_mapping: null
+
+  - id: us_avg_hourly_earnings
+    label: US average hourly earnings, all employees, total private
+    role: context
+    unit: "US dollars per hour"
+    status: found
+    source:
+      org: "US BLS via FRED (series CES0500000003)"
+      url: "https://fred.stlouisfed.org/data/CES0500000003.txt"
+      alt_url: "https://api.stlouisfed.org/fred/series/observations?series_id=CES0500000003&api_key=${FRED_API_KEY}&file_type=json"
+      format: text
+    update_mode: auto
+    cadence: monthly
+    stale_after_days: 75
+    licence: "check FRED/BLS terms"
+    validation: {min: 5, max: 100, max_period_change_pct: 3}
+    model: {method: linear_trend_with_band, window_years: null, continuation: null, acceleration: null, reversal: null}
+    notes: "Nominal dollars, not inflation-adjusted. Path untested."
+    reader_mapping: null
+
+  - id: ai_job_postings_share
+    label: Share of job postings mentioning AI (Indeed Hiring Lab AI tracker)
+    role: context
+    unit: "% of postings (confirm on first fetch)"
+    status: found
+    source:
+      org: Indeed Hiring Lab
+      url: "https://github.com/hiring-lab/ai-tracker"
+      format: "csv in repository (file name to be confirmed)"
+    update_mode: auto
+    cadence: weekly
+    stale_after_days: 30
+    licence: "check the repository licence and attribution requirements"
+    validation: {min: 0, max: 100}
+    model: {method: linear_trend_with_band, window_years: null, continuation: null, acceleration: null, reversal: null}
+    notes: "The repository exists (found by search); its files, columns and licence have not been read."
+    reader_mapping: null
+
+  - id: ai_adoption_by_workers
+    label: Share of workers using AI at work (exposure variable; source to choose)
+    role: context
+    unit: "% of workers"
+    status: to_identify
+    source: {org: null, url: null, format: null}
+    update_mode: review
+    cadence: to_decide
+    stale_after_days: null
+    licence: null
+    validation: {min: 0, max: 100}
+    model: null
+    notes: "Candidate: the survey series behind Bick, Blandin & Deming (NBER w32966). Not verified."
+    reader_mapping: {question: "Do you use AI at work?", maps_to: this variable (positions reader against adopters)}
